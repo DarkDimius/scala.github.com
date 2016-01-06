@@ -50,7 +50,7 @@ If implemented in dotty code base, such modifications would be needed:
  - extend LambdaLift to trigger error if `@static` annotated method cannot be lifted to top level scope;
  - extend GenBCode to emmit static fields and methods in companion classes and forwarders to them in companion modules.
 
-## Overriding of inherited @static members ##
+## Overriding of @static members is not allowed##
 Java allows classes to define static methods with same name and signature as a static method of superclass. In order to define semantics of what does it mean,
 Java Specification introduces a notion of [hiding](http://docs.oracle.com/javase/specs/jls/se8/html/jls-8.html#jls-8.4.8.2).
 
