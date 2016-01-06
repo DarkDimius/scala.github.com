@@ -28,7 +28,7 @@ There is no special syntax proposed to access these members, they are accessed a
 
 ## Restrictions ##
 
-The following rules ensure that method can be correctly compiled into static member on JVM:
+The following rules ensure that method can be correctly compiled into static member on both JVM and JavaScript:
 
 1. Only objects can have members annotated as `@static`
 
@@ -61,7 +61,13 @@ it could be introduced in a separate SIP.
 Lucas Rytz has proposed a similar SIP, but his SIP requires changes to typer to ensure that `@static` fields do not capture `this`. 
 It also does not address the question of `@static` members in inner objects and inheritance\hiding of those methods in subclasses.
 
+## Open questions ##
+ - @static lazy val
+ - @static methods in companions of traits. Java8 supports this.
+ - @static vals in companions of traits. Java8 supports this, but not vars.
+
 ## See Also ##
  * [SI-4581](https://issues.scala-lang.org/browse/SI-4581) is a request for a `@static` annotation
  * [Another proposal by @lrytz](https://gist.github.com/lrytz/80f3141de8240f9629da)
  * [Old discussion on scala-internals mailing list](https://groups.google.com/forum/#!searchin/scala-internals/static/scala-internals/vOps4k8CADY/Dq1I3Ysvao0J)
+ * [Another discussion of scala-internals mailing list](https://groups.google.com/forum/#!searchin/scala-internals/static/scala-internals/Y3OlFWPvnyM/tGE5BQw4Pe0J)
