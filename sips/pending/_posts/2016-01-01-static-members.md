@@ -45,7 +45,7 @@ The following rules ensure that method can be correctly compiled into static mem
 ## Compilation scheme ##
 The current proposed scheme piggybacks on already existing scoping restrictions in typer, thus requiring `@static` methods to be defined in `objects`.
 If implemented in dotty code base, such modifications would be needed:
- - extend RefChecks to check restrictions 4, 5 and 6. This can be done in a separate mini-phase;
+ - extend RefChecks to check restrictions 1, 2, 4, 5 and 6. This can be done in a separate mini-phase;
  - extend LamdaLift.CollectDependencies to be aware that accessing member annotated `@static` should not trigger capturing object that contains this member;
  - extend LambdaLift to trigger error if `@static` annotated method cannot be lifted to top level scope;
  - extend GenBCode to emmit static fields and methods in companion classes and forwarders to them in companion modules.
