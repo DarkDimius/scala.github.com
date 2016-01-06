@@ -30,13 +30,13 @@ There is no special syntax proposed to access these members, they are accessed a
 
 The following rules ensure that method can be correctly compiled into static member on JVM:
 
-1. Only objects can have fields annotated as `@static`
+1. Only objects can have members annotated as `@static`
 
 2. The fields annotated with `@static` should preceed any non-`@static` fields. This ensures that we do not introduce surprises for users in initialization order.
 
-3. The right hand side of method or field annotated as `@static` can only refer to members of globally accessable objects and `@static` members.
+3. The right hand side of method or field annotated as `@static` can only refer to members of globally accessible objects and `@static` members. In particular, for non-static objects `this` is not accesable. `Super` is never accessable.
 
-4. If member `foo` of `object C` is annotated `@static`, companion class `C` is not allowed define term members with name `foo`. 
+4. If member `foo` of `object C` is annotated `@static`, companion class `C` is not allowed to define term members with name `foo`. 
 
 5. If member `foo` of `object C` is annotated `@static`, companion class `C` is not allowed to inherit classes that define a term member with name `foo`..
 
