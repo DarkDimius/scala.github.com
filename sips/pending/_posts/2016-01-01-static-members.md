@@ -43,7 +43,7 @@ The following rules ensure that method can be correctly compiled into static mem
 6. If companion `object P` defines an `@static` method or field `foo`, classes inheriting from companion `class P` and their companions are not allowed to define term members with name `foo`.
 
 ## Compilation scheme ##
-The current proposed scheme piggybacks on already existing scoping restrictions in typer, thus requiring `@static` methods to be defined in `objects`.
+No modificaiton of typer is planned. The current proposed scheme piggybacks on already existing scoping restrictions in typer, thus requiring `@static` methods to be defined in `objects`.
 If implemented in dotty code base, such modifications would be needed:
  - extend RefChecks to check restrictions 1, 2, 4, 5 and 6. This can be done in a separate mini-phase;
  - extend LamdaLift.CollectDependencies to be aware that accessing member annotated `@static` should not trigger capturing object that contains this member;
