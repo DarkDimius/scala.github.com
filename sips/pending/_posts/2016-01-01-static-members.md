@@ -4,7 +4,7 @@ title: SIP 25 - @static fields and methods in Scala objects(SI-4581)
 disqus: true
 ---
 
-__Dmitry Petrashko and Sébastien Doeraene__
+__Dmitry Petrashko, Sébastien Doeraene and Martin Odersky__
 
 __first submitted TODO 2016__
 
@@ -30,6 +30,7 @@ There is no special syntax proposed to access these members, they are accessed a
 
 For example:
 
+```scala
 {% highlight scala %}
 class Foo
 
@@ -41,10 +42,12 @@ object Foo {
 println(Foo.x)
 println(Foo.bar(12))
 {% endhighlight %}
+```
 
 Intuively, the presence of the `@static` annotation ensures that a field/method is declared as a static member of the companion class.
 For the JVM, the above would therefore look to other Java code as if it had been declared with the following Java code:
 
+```java
 {% highlight java %}
 class Foo {
   public static int x = 5;
@@ -53,10 +56,12 @@ class Foo {
   }
 }
 {% endhighlight %}
+```
 
 In Scala.js, the `@static` annotation has no semantic effect in Scala objects, as they are not visible from JavaScript anyway (it could be used for optimizations).
 It has a semantic effect on Scala.js-defined JS classes, for example:
 
+```scala
 {% highlight scala %}
 @ScalaJSDefined
 class Foo extends js.Object
@@ -67,9 +72,11 @@ object Foo extends js.Object {
   @static def bar(y: Int): Int = x + y
 }
 {% endhighlight %}
+```
 
 would look to JavaScript code as if it had been declared with the following JavaScript code:
 
+```javascript
 {% highlight javascript %}
 class Foo extends Object {
   static bar(y) {
@@ -78,6 +85,7 @@ class Foo extends Object {
 }
 Foo.x = 5; // in ES6, there is no declarative syntax for static fields yet
 {% endhighlight %}
+```
 
 ## Restrictions ##
 
