@@ -101,7 +101,7 @@ The following rules ensure that method can be correctly compiled into static mem
 
 5. If a member `foo` of an `object C` is annotated with `@static`, the companion class `C` is not allowed to inherit classes that define a term member with name `foo`.
 
-6. Only @static methods and vals are supported in companions of traits. Java8 supports those, but not vars, and JavaScript does not have interfaces at all.
+6. Only `@static` methods and vals are supported in companions of traits. Java8 supports those, but not vars, and JavaScript does not have interfaces at all.
 
 ## Compilation scheme ##
 No modificaiton of the typer is planned. The current proposed scheme piggybacks on already existing scoping restrictions in the typer, thus requiring `@static` methods to be defined in `objects`.
