@@ -87,6 +87,23 @@ Foo.x = 5; // in ES6, there is no declarative syntax for static fields yet
 {% endhighlight %}
 ```
 
+## Comparisson with mirror classes ##
+
+Scalac currently generates static forwarders for fields and methods in top-level objects:
+
+```scala
+{% highlight scala %}
+object O {
+  val d = 1 
+  object I {
+    val f = 1
+  }
+}
+{% endhighlight %}
+```
+
+Under proposed scheme users will be able to opt-in to have field `f` on inner object `I` generated as static field.
+
 ## Restrictions ##
 
 The following rules ensure that method can be correctly compiled into static member on both JVM and JavaScript:
@@ -95,7 +112,7 @@ The following rules ensure that method can be correctly compiled into static mem
 
 2. The fields annotated with `@static` should preceed any non-`@static` fields. This ensures that we do not introduce surprises for users in initialization order.
 
-3. The right hand side of a method or field annotated with `@static` can only refer to members of globally accessible objects and `@static` members. In particular, for non-static objects `this` is not accesible. `super` is never accessible.
+3. The right hand side of a method or field annotated with `@static` can only refer to top-level classes, members of globally accessible objects and `@static` members. In particular, for non-static objects `this` is not accesible. `super` is never accessible.
 
 4. If a member `foo` of an `object C` is annotated with `@static`, the companion class `C` is not allowed to define term members with name `foo`. 
 
