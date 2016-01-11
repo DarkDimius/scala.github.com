@@ -6,7 +6,7 @@ disqus: true
 
 __Dmitry Petrashko, Sébastien Doeraene and Martin Odersky__
 
-__first submitted TODO 2016__
+__first submitted 11 January 2016__
 
 ## Motivation ##
 
@@ -102,7 +102,9 @@ object O {
 {% endhighlight %}
 ```
 
-Under proposed scheme users will be able to opt-in to have field `f` on inner object `I` generated as static field.
+Under proposed scheme users will be able to opt-in to have field `f` defined inside inner object `I` emmited as static field. 
+In case `O.d` is annotated with `@static` the field will be crated as static field in `class O`.
+If not annotated, it will be created in the companion module with a static forwarder in `class O`.
 
 ## Restrictions ##
 
