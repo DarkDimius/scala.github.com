@@ -102,8 +102,8 @@ object O {
 {% endhighlight %}
 ```
 
-Under proposed scheme users will be able to opt-in to have field `f` defined inside inner object `I` emmited as static field. 
-In case `O.d` is annotated with `@static` the field will be crated as static field in `class O`.
+Under the proposed scheme users will be able to opt-in to have the field `f` defined in the inner object `I` emited as a static field. 
+In case `O.d` is annotated with `@static` the field will be crated as a static field in `class O`.
 If not annotated, it will be created in the companion module with a static forwarder in `class O`.
 
 ## Restrictions ##
