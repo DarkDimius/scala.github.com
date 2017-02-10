@@ -13,11 +13,12 @@ __first submitted 13 January 2017__
 Scala is a language which evolves fast and thus made a decision to only promise binary compatibility across minor releases\[[3]\].
 At the same time, there is a demand to develop APIs that live longer than a major release cycle of Scala.
 This SIP introduces an annotation `@stableABI` that checks that `what you write is what you get`.
-It will fail compilation in case compilation scheme of this class requires changes to methods signatures,
-making them different from those written by developers and introducing implicit dependency on version of this desugaring. 
 
+`@stableABI` is a linter, that does not change binary output, but will fail compilation if Public API of a class uses features
+of Scala that are desugared by compiler and may be binary incompatible across major releases.
+   
 As long as declarations in source have not changed, `@stableABI` annotated class will be compatible across major versions of Scala. 
-
+It complements MiMa\[[2]\] in indicating if a class will remain binary compatible across major Scala releases.
 
 ## Term definitions
 * #####Binary descriptors
@@ -58,8 +59,10 @@ As long as declarations in source have not changed, `@stableABI` annotated class
 2. Defining a class which is supposed to be also used from other JVM languages such as Java\Kotlin.
 `@stableABI` will ensure both binary compatibility and that there are no unexpected methods 
  that would show up in members of a class or an interface.
+3. Library authors can take advantage of language features introduced in new major versions of Scala
+ while still serving users on older language versions by defining their Public API as `@stableABI`.
  
-The biggest use-case envisioned here by the authors is migration to Dotty. 
+The important use-case envisioned here by the authors is migration to Dotty. 
 We envision that there might be code-bases that for some reason don't compile either with Dotty or with Scalac. 
 This can be either because they rely on union types, only present in Dotty, 
 or because they need early initializers, which are only supported by Scalac.
@@ -83,7 +86,7 @@ These interfaces can be replaced by `@stableABI` annotated traits to reach the s
 ## Design Guidelines
 `@stableABI` is a feature which is supposed to be used by a small subset of the ecosystem to be binary compatible across major versions of Scala.
 Thus this is designed as an advanced feature that is used rarely and thus is intentionally verbose. 
-It's designed to provide strong guarantees, in some cases sacrificing ease of use.
+It's designed to provide strong guarantees, in some cases sacrificing ease of use and be used in combination with MiMa\[[2]\]
  
 The limitations enforced by `@stableABI` are designed to be an overapproximation: 
 instead of permitting a list of features known to be compatible, `@stableABI` enforces a stronger 
@@ -155,7 +158,7 @@ Note that while those features are prohibited in the public API, they can be saf
 
   - public fields. Can be simulated by explicitly defining public getters and setters that access a private field;
   - lazy vals. Can be simulated by explicitly writing an implementation in source;
-  - case classes. Can be simulated by explicitly defining getters and other members synthesized for a case class(`copy`, `productArity`, `apply`, `unApply`, `unapply`).
+  - case classes. Can be simulated by explicitly defining getters and other members synthesized for a case class(`copy`, `productArity`, `apply`, `unapply`, etc).
 
 The features listed below cannot be easily re-implemented in a class or trait annotated with `@stableABI`.
   - default arguments;
@@ -201,7 +204,8 @@ as well as methods and implicit conversions imported from `scala` and `Predef`.
 As such Standard library is expected would be the biggest source of warnings defined in previous section.
 
 We propose to consider either making some classes in standard library use `@stableABI` or define new `@stableABI` 
-super-interfaces for them that should be used in `@stableABI` classes. This would also allow to consume Scala classes from other JVM languages such as Kotlin and Java.
+super-interfaces for them that should be used in `@stableABI` classes. 
+This would also allow to consume Scala classes from other JVM languages such as Kotlin and Java.
 ## `@stableABI` and Scala.js
 
 Allowing to write API-defining classes in Scala instead of Java will allow them to compile with Scala.js, 
