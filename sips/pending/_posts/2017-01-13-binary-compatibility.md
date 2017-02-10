@@ -17,7 +17,7 @@ This SIP introduces an annotation `@stableABI` that checks that `what you write 
 `@stableABI` is a linter, that does not change binary output, but will fail compilation if Public API of a class uses features
 of Scala that are desugared by compiler and may be binary incompatible across major releases.
    
-As long as declarations in source have not changed, `@stableABI` annotated class will be compatible across major versions of Scala. 
+As long as declarations in source have not changed, `@stableABI` annotated classes will be compatible across major versions of Scala. 
 It complements MiMa\[[2]\] in indicating if a class will remain binary compatible across major Scala releases.
 
 ## Term definitions
@@ -30,10 +30,10 @@ It complements MiMa\[[2]\] in indicating if a class will remain binary compatibl
   > A method descriptor contains zero or more parameter descriptors, representing the types of parameters that the method takes, and a return descriptor, representing the type of the value (if any) that the method returns. 
     
   Binary descriptors are used in the bytecode to indicate what fields and methods are accessed or invoked.
-  If method or field has his descriptor changed, previously compiled classes that used different descriptor will fail in
+  If a method or field has its descriptor changed, previously compiled classes that used different descriptor will fail in
   runtime as they no longer link to the changed field.
   
-  In this document we use term `binary descriptor` to refer to both method and field descriptors used by the JVM.
+  In this document we use the term `binary descriptor` to refer to both method and field descriptors used by the JVM.
 * #####Public API
   
   Methods and fields marked with `ACC_PUBLIC`\[[5]\] may be accessed from any class and package. 
@@ -46,7 +46,7 @@ It complements MiMa\[[2]\] in indicating if a class will remain binary compatibl
   Changing a binary descriptor of a method or a field marked with `ACC_PROTECTED` is a binary incompatible change 
   which may affect all subclasses of this class leading to a runtime linkage failure.
   
-  In this document we use term `Public API` to refer both to methods and fields defined as `ACC_PUBLIC` and `ACC_PROTECTED`. 
+  In this document we use the term `Public API` to refer both to methods and fields defined as `ACC_PUBLIC` and `ACC_PROTECTED`. 
   Changes do binary descriptors of Public API may lead to runtime linkage failures.  
 * #####Binary compatibility
 
@@ -56,7 +56,7 @@ It complements MiMa\[[2]\] in indicating if a class will remain binary compatibl
 ## Use cases
 
 1. Publishing a library that would work across major Scala versions, such as 2.12 & 2.13 and Dotty.
-2. Defining a class which is supposed to be also used from other JVM languages such as Java\Kotlin.
+2. Defining a class which is supposed to be used from other JVM languages such as Java\Kotlin.
 `@stableABI` will ensure both binary compatibility and that there are no unexpected methods 
  that would show up in members of a class or an interface.
 3. Library authors can take advantage of language features introduced in new major versions of Scala
@@ -78,7 +78,7 @@ the current approach is to either develop them in Java or to use best guess to r
 There's also a different approach which is used by SBT: instead of publishing a binary `compiler-interface`, sources are published instead that would be locally compiled.
 
 Examples:
-  1. Zinc\[[8]\] is writing their interfaces in Java because the interface has to be Scala version agnostic, as it is shipped in every sbt release, independently of Scala version that was used to compiler zinc or will be used in to compile the project.
+  1. Zinc\[[8]\] is writing their interfaces in Java because the interface has to be Scala version agnostic, as it is shipped in every sbt release, independently of Scala version that was used to compile zinc or will be used in to compile the project.
 SBT additionally compiles on demand the compiler bridge, which implements this Java interface. 
 
   2. Dotty\[[7]\] currently uses java defined interfaces as public API for IntelliJ in order to ensure binary compatibility. 
@@ -87,13 +87,13 @@ These interfaces can be replaced by `@stableABI` annotated traits to reach the s
 ## Design Guidelines
 `@stableABI` is a feature which is supposed to be used by a small subset of the ecosystem to be binary compatible across major versions of Scala.
 Thus this is designed as an advanced feature that is used rarely and thus is intentionally verbose. 
-It's designed to provide strong guarantees, in some cases sacrificing ease of use and be used in combination with MiMa\[[2]\]
+It's designed to provide strong guarantees, in some cases sacrificing ease of use and to be used in combination with MiMa\[[2]\]
  
 The limitations enforced by `@stableABI` are designed to be an overapproximation: 
 instead of permitting a list of features known to be compatible, `@stableABI` enforces a stronger 
 check which is sufficient to promise binary compatibility. 
 
-This SIP intentionally goes follows a very conservative approach. 
+This SIP intentionally follows a very conservative approach. 
 This is because we will be able to allow more features later, but we won't have an opportunity to remove them.
 
 ## Overview ##
@@ -102,7 +102,7 @@ In order for a class, trait or an object to succeed compilation with the `@stabl
   - if a class or an object has a companion annotated with `@stableABI`, than annotation applies to both of them;
   - use a subset of Scala that during compilation does not require changes to public API of the class, including
      - synthesizing new members, either concrete or abstract;
-     - changing binary signatures of existing members, either concrete or abstract;
+     - changing binary descriptors of existing members, either concrete or abstract;
 
 `@stableABI` does not change the compilation scheme of a class:
  compiling a class previously annotated with the `@stableABI`, will produce the same bytecode with or without `@stableABI` annotation. 
@@ -199,10 +199,10 @@ Because of this we propose to emmit warnings in those cases:
 Those warnings can be suppressed using an `@unchecked` annotations or made fatal using `+Xfatal-warnings`.
  
 ## The case of the standard library ##
-Standard library defines types commonly used in Scala signatures such as `Option` and `List`, 
+The Standard library defines types commonly used as arguments or return types such as `Option` and `List`, 
 as well as methods and implicit conversions imported from `scala` and `Predef`.
 
-As such Standard library is expected would be the biggest source of warnings defined in previous section.
+As such Standard library is expected to be the biggest source of warnings defined in previous section.
 
 We propose to consider either making some classes in standard library use `@stableABI` or define new `@stableABI` 
 super-interfaces for them that should be used in `@stableABI` classes. 
@@ -227,10 +227,10 @@ across major versions, while MiMa checks that previously published artifacts ind
 so introduction of new members won't be prohibited. This is a use-case for MiMa.
   
 MiMa does not indicate how hard, if possible, would it be to maintain compatibility of a class across future versions of Scala.
-Multiple features of Scala, most notably lazy vals and traits, has been compiled diffently by different Scala versions
+Multiple features of Scala, most notably lazy vals and traits, have been compiled diffently by different Scala versions
 making porting existing compiled bytecode across versions very hard. 
 MiMa will complain retroactively that the new version is incompatible with the old one. 
-`@stableABI` will instead indicate at compile time that the old version had used features whose encoding is prone to change.
+`@stableABI` will instead indicate at compile time that the old version used features whose encoding is prone to change.
 This provides early guidance and warning when designing long-living APIs before they are publicly released.  
 
 ## Compilation scheme ##
