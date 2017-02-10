@@ -77,10 +77,11 @@ the current approach is to either develop them in Java or to use best guess to r
 
 There's also a different approach which is used by SBT: instead of publishing a binary `compiler-interface`, sources are published instead that would be locally compiled.
 
-Examples:  
-1. Zinc\[[8]\] is writing their interfaces in Java because the interface has to be Scala version agnostic, as it is shipped in every sbt release, independently of Scala version that was used to compiler zinc or will be used in to compile the project.
+Examples:
+  1. Zinc\[[8]\] is writing their interfaces in Java because the interface has to be Scala version agnostic, as it is shipped in every sbt release, independently of Scala version that was used to compiler zinc or will be used in to compile the project.
 SBT additionally compiles on demand the compiler bridge, which implements this Java interface. 
-2. Dotty\[[7]\] currently uses java defined interfaces as public API for IntelliJ in order to ensure binary compatibility. 
+
+  2. Dotty\[[7]\] currently uses java defined interfaces as public API for IntelliJ in order to ensure binary compatibility. 
 These interfaces can be replaced by `@stableABI` annotated traits to reach the same goal.  
 
 ## Design Guidelines
