@@ -1,6 +1,6 @@
 ---
 layout: sip
-title: SIP XX - Improving binary compatibility with @binaryCompatible
+title: SIP XX - Improving binary compatibility with @stableABI
 disqus: true
 ---
 
@@ -8,51 +8,98 @@ __Dmitry Petrashko__
 
 __first submitted 13 January 2017__
 
-## Introduction ##
+## Introduction
 
-Scala is a language which evolves fast and thus made a decision to only promise binary compatibility across minor releases.
+Scala is a language which evolves fast and thus made a decision to only promise binary compatibility across minor releases\[[3]\].
 At the same time, there is a demand to develop APIs that live longer than a major release cycle of Scala.
-This SIP introduces an annotation `@binaryCompatible` that checks that `what you write is what you get`.
-It will fail compilation in case emitted methods or their signatures 
-are different from those written by users. 
-As long as signatures of methods in source is not changed, `@binaryCompatible` annotated class 
-will be compatible across major version of Scala. 
+This SIP introduces an annotation `@stableABI` that checks that `what you write is what you get`.
+It will fail compilation in case compilation scheme of this class requires changes to methods signatures,
+making them different from those written by developers and introducing implicit dependency on version of this desugaring. 
 
-## Use Cases
+As long as declarations in source have not changed, `@stableABI` annotated class will be compatible across major versions of Scala. 
+
+
+## Term definitions
+* #####Binary descriptors
+
+  As defined by the JVM spec\[[4]\]: 
+  > A descriptor is a string representing the type of a field or method. Descriptors are represented in the class file format using modified UTF-8 strings (§4.4.7)
+   and thus may be drawn, where not further constrained, from the entire Unicode codespace.
+  >
+  > A method descriptor contains zero or more parameter descriptors, representing the types of parameters that the method takes, and a return descriptor, representing the type of the value (if any) that the method returns. 
+    
+  Binary descriptors are used in the bytecode to indicate what fields and methods are accessed or invoked.
+  If method or field has his descriptor changed, previously compiled classes that used different descriptor will fail in
+  runtime as they no longer link to the changed field.
+  
+  In this document we use term `binary descriptor` to refer to both method and field descriptors used by the JVM.
+* #####Public API
+  
+  Methods and fields marked with `ACC_PUBLIC`\[[5]\] may be accessed from any class and package. 
+  This loosely corresponds to absence of AccessModifier\[[6]\] in Scala source.
+  Changing a binary descriptor of a method or a field marked with `ACC_PUBLIC` is a binary incompatible change 
+  which may affect all classes in all packages leading to a runtime linkage failure.
+  
+  Methods and fields marked with `ACC_PROTECTED`\[[5]\] may be accessed within subclasses.
+  This loosely corresponds to presence of `protected` AccessModifier\[[6]\] in Scala source. 
+  Changing a binary descriptor of a method or a field marked with `ACC_PROTECTED` is a binary incompatible change 
+  which may affect all subclasses of this class leading to a runtime linkage failure.
+  
+  In this document we use term `Public API` to refer both to methods and fields defined as `ACC_PUBLIC` and `ACC_PROTECTED`. 
+  Changes do binary descriptors of Public API may lead to runtime linkage failures.  
+* ####Binary compatibility
+
+  Two versions of the same class are called binary compatible if there are no changes to the Public API of this class,
+  meaning that those two classes can be substituted in runtime without linkage errors.
+
+## Use cases
+
+2. Defining a class which is supposed to be also used from Java\Kotlin.
+`@stableABI` will ensure both binary compatibility and that there are no unexpected methods 
+ that would show up in members of a class or an interface.
+
+## Current Status
 In case there's a need to develop an API that will be used by clients compiled using different major versions of Scala, 
 the current approach is to either develop them in Java or to use best guess to restrict what Scala features should be used.
-There's also a different approach which is used by SBT: instead of publishing a binary `compiler-interface`, sources are published instead 
-that would be locally compiled.
 
-There's also a use-case of defining a class which is supposed to be also used from Java. 
-`@binaryCompatible` will ensure that there are no not-expected methods that would show up in members of a class or an interface.
+There's also a different approach which is used by SBT: instead of publishing a binary `compiler-interface`, sources are published instead that would be locally compiled.
 
-Dotty currently uses java defined interfaces as public API for IntelliJ in order to ensure binary compatibility. 
-These interfaces can be replaced by `@binaryCompatible` annotated traits to reach the same goal.  
+Examples:  
+1. Zinc\[[8]\] is writing their interfaces in Java because the interface has to be Scala version agnostic, as it is shipped in every sbt release, independently of Scala version that was used to compiler zinc or will be used in to compile the project.
+SBT additionally compiles on demand the compiler bridge, which implements this Java interface. 
+2. Dotty\[[7]\] currently uses java defined interfaces as public API for IntelliJ in order to ensure binary compatibility. 
+These interfaces can be replaced by `@stableABI` annotated traits to reach the same goal.  
+
+
+
 
 ## Design Guidelines
-`@binaryCompatible` is a feature which is supposed to be used by a small subset of the ecosystem to be binary compatible across major versions of Scala.
+`@stableABI` is a feature which is supposed to be used by a small subset of the ecosystem to be binary compatible across major versions of Scala.
 Thus this is designed as an advanced feature that is used rarely and thus is intentionally verbose. 
 It's designed to provide strong guarantees, in some cases sacrificing ease of use.
  
-The limitations enforced by `@binaryCompatible` are designed to be an overapproximation: 
-instead of permitting a list of features known to be compatible, `@binaryCompatible` enforces a stronger 
+The limitations enforced by `@stableABI` are designed to be an overapproximation: 
+instead of permitting a list of features known to be compatible, `@stableABI` enforces a stronger 
 check which is sufficient to promise binary compatibility. 
 
+This SIP intentionally goes follows a very conservative approach. 
+This is because we will be able to allow more features later, but we won't have an opportunity to remove them.
+
 ## Overview ##
-In order for a class or a trait to succeed compilation with the `@binaryCompatible` annotation it has to be:
+In order for a class, trait or an object to succeed compilation with the `@stableABI` annotation it has to be:
   - defined on the top level;
+  - if a class or an object has a companion annotated with `@stableABI`, than annotation applies to both of them;
   - use a subset of Scala that during compilation does not require changes to public API of the class, including
      - synthesizing new members, either concrete or abstract;
      - changing binary signatures of existing members, either concrete or abstract;
 
-`@binaryCompatible` does not change the compilation scheme of a class:
- compiling a class previously annotated with the `@binaryCompatible`, will produce the same bytecode with or without `@binaryCompatible` annotation. 
+`@stableABI` does not change the compilation scheme of a class:
+ compiling a class previously annotated with the `@stableABI`, will produce the same bytecode with or without `@stableABI` annotation. 
 
-Below are several examples of classes and traits that succeed compilation with `@binaryCompatible`
+Below are several examples of classes and traits that succeed compilation with `@stableABI`
 ```scala
 {% highlight scala %}
-@binaryCompatible
+@stableABI
 trait AbstractFile {
   def name(): String
 
@@ -61,12 +108,12 @@ trait AbstractFile {
   def jfile(): Optional[File]
 }
 
-@binaryCompatible
+@stableABI
 trait SourceFile extends AbstractFile {
   def content(): Array[Char]
 }
 
-@binaryCompatible
+@stableABI
 trait Diagnostic {
   def message(): String
 
@@ -75,14 +122,14 @@ trait Diagnostic {
   def position(): Optional[SourcePosition]
 }
 
-@binaryCompatible
+@stableABI
 object Diagnostic {
   @static final val ERROR: Int = 2
   @static final val WARNING: Int = 1
   @static final val INFO: Int = 0
 }
 
-@binaryCompatible
+@stableABI
 class FeaturesInBodies {
   def apiMethod: Int = {
     // as body of the method isn't part of the public interface, one can use all features of Scala here.
@@ -93,9 +140,9 @@ class FeaturesInBodies {
 {% endhighlight %}
 ```
 
-## Features that will fail compilation with `@binaryCompatible`
+## Features that will fail compilation with `@stableABI`
 The features listed below have complex encodings that may change in future versions. We prefer not to compromise on them.
-Most of those features can be simulated in a binary compatible way by writing a verbose re-impelemtation 
+Most of those features can be simulated in a binary compatible way by writing a verbose re-implemtation 
 which won't rely on desugaring performed inside compiler.
 Note that while those features are prohibited in the public API, they can be safely used inside bodies of the methods.
 
@@ -103,13 +150,13 @@ Note that while those features are prohibited in the public API, they can be saf
   - lazy vals. Can be simulated by explicitly writing an implementation in source;
   - case classes. Can be simulated by explicitly defining getters and other members synthesized for a case class(`copy`, `productArity`, `apply`, `unApply`, `unapply`).
 
-The features listed below cannot be easily re-implemented in a class or trait annotated with `@binaryCompatible`.
+The features listed below cannot be easily re-implemented in a class or trait annotated with `@stableABI`.
   - default arguments;
   - default methods. See Addendum;
   - constant types(both explicit and inferred);
   - inline.
     
-## `@binaryCompatible` and Scala.js
+## `@stableABI` and Scala.js
 
 Allowing to write API-defining classes in Scala instead of Java will allow them to compile with Scala.js, 
 which would have benefit of sharing the same source for two ecosystems.
@@ -122,26 +169,26 @@ Providing stronger binary compatibility guarantees for JVM will automatically pr
 The Migration Manager for Scala (MiMa in short) is a tool for diagnosing binary incompatibilities for Scala libraries.
 MiMa allows to compare binary APIs of two already compiled classfiles and reports errors if APIs do not match perfectly.
 
-MiMa and `@binaryCompatible` complement each other, as `@binaryCompatible` helps to develop APIs that stay compatible 
+MiMa and `@stableABI` complement each other, as `@stableABI` helps to develop APIs that stay compatible 
 across major versions, while MiMa checks that previously published artifacts indeed have the same API.
 
-`@binaryCompatible` does not compare the currently compiled class or trait against previous version, 
+`@stableABI` does not compare the currently compiled class or trait against previous version, 
 so introduction of new members won't be prohibited. This is a use-case for MiMa.
   
 MiMa does not indicate how hard, if possible, would it be to maintain compatibility of a class across future versions of Scala.
 Multiple features of Scala, most notably lazy vals and traits, has been compiled diffently by different Scala versions
 making porting existing compiled bytecode across versions very hard. 
 MiMa will complain retroactively that the new version is incompatible with the old one. 
-`@binaryCompatible` will instead indicate at compile time that the old version had used features whose encoding is prone to change.
+`@stableABI` will instead indicate at compile time that the old version had used features whose encoding is prone to change.
 This provides early guidance and warning when designing long-living APIs before they are publicly released.  
 
 ## Compilation scheme ##
 No modification of typer or any existing phase is planned. The current proposed scheme introduces a late phase that runs before the very bytecode emission that checks that:
- - classes and traits annotated as  `@binaryCompatible` are on the top level; 
- - no non-private members where introduced inside classes and traits annotated as  `@binaryCompatible` by compiler using phase travel;
- - no non-private members inside classes and traits annotated as  `@binaryCompatible` has changed their signature from the one written by developer.
+ - classes and traits annotated as  `@stableABI` are on the top level; 
+ - no non-private members where introduced inside classes and traits annotated as  `@stableABI` by compiler using phase travel;
+ - no non-private members inside classes and traits annotated as  `@stableABI` has changed their binary descriptor from the one written by developer.
 
-The current prototype is implemented for Dotty and supports everything descibed in this SIP. 
+The current prototype is implemented for Dotty and supports everything described in this SIP. 
 The implementation is simple with less than 50 lines of non-boilerplate code. 
 The current implementation has a scope for improvement of error messages that will report domain specific details for disallowed features, but it already prohibits them.
 
@@ -161,8 +208,25 @@ The classes which have been correctly inheriting those traits compiled by previo
 may need recompilation if trait has been recompiled with a new major version of Scala. 
  
 Thus, the authors of this SIP has decided not to allow default methods in the 
-`@binaryCompatible` traits.
+`@stableABI` traits.
 
 ## See Also ##
- * [dotty#1900](https://github.com/lampepfl/dotty/pull/1900) is an implementation for Dotty
- * [MiMa](https://github.com/typesafehub/migration-manager) 
+
+ 1. [dotty#1900][1]
+ 2. [MiMa][2] 
+ 3. [releases-compatibility][3]
+ 4. [Descriptor definition in JVM Specification][4]
+ 5. [JVM access flags][5]
+ 6. [Scala AccessModifiers][6]
+ 7. [Dotty interfaces][7]
+ 8. [Zinc interfaces][8]
+
+
+[1]: https://github.com/lampepfl/dotty/pull/1900 "an implementation for Dotty"
+[2]: https://github.com/typesafehub/migration-manager "MiMa"
+[3]: http://docs.scala-lang.org/overviews/core/binary-compatibility-of-scala-releases.html "Binary compatibility of Scala releases"
+[4]: http://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.3 "Descriptor definition in JVM Specification"
+[5]: http://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.6-200-A.1 "JVM access flags"
+[6]: http://www.scala-lang.org/files/archive/spec/2.11/05-classes-and-objects.html#modifiers "Scala AccessModifiers"
+[7]: https://github.com/lampepfl/dotty/tree/master/interfaces/src/dotty/tools/dotc/interfaces "Dotty interfaces"
+[8]: https://github.com/sbt/zinc/tree/1.0/internal/compiler-interface/src/main/java/xsbti "zinc interfaces"
