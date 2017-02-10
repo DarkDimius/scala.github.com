@@ -58,6 +58,15 @@ As long as declarations in source have not changed, `@stableABI` annotated class
 2. Defining a class which is supposed to be also used from other JVM languages such as Java\Kotlin.
 `@stableABI` will ensure both binary compatibility and that there are no unexpected methods 
  that would show up in members of a class or an interface.
+ 
+The biggest use-case envisioned here by the authors is migration to Dotty. 
+We envision that there might be code-bases that for some reason don't compile either with Dotty or with Scalac. 
+This can be either because they rely on union types, only present in Dotty, 
+or because they need early initializers, which are only supported by Scalac.
+
+At the same time, by marking either those classes themselves or their parents as `@stableABI`, 
+the compiled artifacts could be used in both Dotty-compiled and Scalac-compiled projects. 
+  
 
 ## Current Status
 In case there's a need to develop an API that will be used by clients compiled using different major versions of Scala, 
@@ -153,7 +162,46 @@ The features listed below cannot be easily re-implemented in a class or trait an
   - default methods. See Addendum;
   - constant types(both explicit and inferred);
   - inline.
-    
+
+## Binary compatibility and transitivity ##
+Consider a class, that is binary compatible but takes a non-binary compatible argument:
+```scala
+{% highlight scala %}
+@stableABI
+class Example {
+  def foo[T](a: MyOption[T]): T = a.get
+}
+
+trait MyOption[T]{
+  lazy val get: T = ???
+}
+{% endhighlight %}
+```
+
+Consider a situation when we re-compile `MyOption` using a different major compiler version than the one used to compile `Example`. 
+Let's assume the new major version of compile has changing binary descriptor of method `get`.
+
+While the code in runtime would still successfully invoke the method `Example.foo`, this method will fail in execution,
+as it will itself call a `MyOption.get` using an outdated descriptor.
+ 
+While in perfect world it would be nice to require all `@stableABI` classes and traits to only take `@stableABI` arguments
+and only return `@stableABI` values, we believe that all-or-nothing system will be a lot harder to adopt and migrate to.
+
+Because of this we propose to emmit warnings in those cases:
+  - non-`@stableABI` value is returned from a method or field defined inside a `@stableABI` class or trait;
+  - an invocation to a method not-defined inside a `@stableABI` class is used in  
+  implementation of a method or a field initializer inside a `@stableABI` class or trait.   
+  
+Those warnings can be suppressed using an `@unchecked` annotations or made fatal using `+Xfatal-warnings`.
+ 
+## The case of the standard library ##
+Standard library defines types commonly used in Scala signatures such as `Option` and `List`, 
+as well as methods and implicit conversions imported from `scala` and `Predef`.
+
+As such Standard library is expected would be the biggest source of warnings defined in previous section.
+
+We propose to consider either making some classes in standard library use `@stableABI` or define new `@stableABI` 
+super-interfaces for them that should be used in `@stableABI` classes. This would also allow to consume Scala classes from other JVM languages such as Kotlin and Java.
 ## `@stableABI` and Scala.js
 
 Allowing to write API-defining classes in Scala instead of Java will allow them to compile with Scala.js, 
@@ -163,12 +211,6 @@ Scala.js currently is binary compatible as long as original bytecode compiled by
 Providing stronger binary compatibility guarantees for JVM will automatically provide stronger guarantees for Scala.js.
 
  
-## Binary compatibility and transitivity ##
-TODO
- 
-## The case of the standard library ##
-TODO
-
 ## Comparison with MiMa ##
 The Migration Manager for Scala (MiMa in short) is a tool for diagnosing binary incompatibilities for Scala libraries.
 MiMa allows to compare binary APIs of two already compiled classfiles and reports errors if APIs do not match perfectly.
