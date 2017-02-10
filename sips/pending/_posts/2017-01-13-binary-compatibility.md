@@ -47,14 +47,15 @@ As long as declarations in source have not changed, `@stableABI` annotated class
   
   In this document we use term `Public API` to refer both to methods and fields defined as `ACC_PUBLIC` and `ACC_PROTECTED`. 
   Changes do binary descriptors of Public API may lead to runtime linkage failures.  
-* ####Binary compatibility
+* #####Binary compatibility
 
   Two versions of the same class are called binary compatible if there are no changes to the Public API of this class,
   meaning that those two classes can be substituted in runtime without linkage errors.
 
 ## Use cases
 
-2. Defining a class which is supposed to be also used from Java\Kotlin.
+1. Publishing a library that would work across major Scala versions, such as 2.12 & 2.13 and Dotty.
+2. Defining a class which is supposed to be also used from other JVM languages such as Java\Kotlin.
 `@stableABI` will ensure both binary compatibility and that there are no unexpected methods 
  that would show up in members of a class or an interface.
 
@@ -69,9 +70,6 @@ Examples:
 SBT additionally compiles on demand the compiler bridge, which implements this Java interface. 
 2. Dotty\[[7]\] currently uses java defined interfaces as public API for IntelliJ in order to ensure binary compatibility. 
 These interfaces can be replaced by `@stableABI` annotated traits to reach the same goal.  
-
-
-
 
 ## Design Guidelines
 `@stableABI` is a feature which is supposed to be used by a small subset of the ecosystem to be binary compatible across major versions of Scala.
@@ -163,7 +161,13 @@ which would have benefit of sharing the same source for two ecosystems.
 
 Scala.js currently is binary compatible as long as original bytecode compiled by Scala JVM is binary compatible.
 Providing stronger binary compatibility guarantees for JVM will automatically provide stronger guarantees for Scala.js.
+
  
+## Binary compatibility and transitivity ##
+TODO
+ 
+## The case of the standard library ##
+TODO
 
 ## Comparison with MiMa ##
 The Migration Manager for Scala (MiMa in short) is a tool for diagnosing binary incompatibilities for Scala libraries.
@@ -184,13 +188,17 @@ This provides early guidance and warning when designing long-living APIs before 
 
 ## Compilation scheme ##
 No modification of typer or any existing phase is planned. The current proposed scheme introduces a late phase that runs before the very bytecode emission that checks that:
- - classes and traits annotated as  `@stableABI` are on the top level; 
- - no non-private members where introduced inside classes and traits annotated as  `@stableABI` by compiler using phase travel;
- - no non-private members inside classes and traits annotated as  `@stableABI` has changed their binary descriptor from the one written by developer.
+ - classes, traits and objects annotated as  `@stableABI` are on the top level; 
+ - compiler did not introduce new Public API methods or fields inside  `@stableABI` classes, traits and objects;
+ - compiler did not change descriptors of existing Public API methods or fields inside `@stableABI` classes, traits and objects.
+ 
+This phase additionally warns if Public API method or field takes an argument or returns a value that isn't marked as `@stableABI`.
+This warning can be suppressed by annotating with `@unchecked`.
 
-The current prototype is implemented for Dotty and supports everything described in this SIP. 
+The current prototype is implemented for Dotty and supports everything described in this SIP, except warnings. 
 The implementation is simple with less than 50 lines of non-boilerplate code. 
-The current implementation has a scope for improvement of error messages that will report domain specific details for disallowed features, but it already prohibits them.
+The current implementation has a scope for improvement of error messages that will report domain specific details for disallowed features, 
+but it already prohibits them.
 
 ## Addendum: Default methods ##
 By `default methods` we mean non-abstract methods defined and implemented by a trait.
